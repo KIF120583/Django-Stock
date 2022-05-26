@@ -20,4 +20,5 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path('index/', views.index),
     path('', views.index), #首頁設定
+    path('login_action/',views.login_action)
 ]
