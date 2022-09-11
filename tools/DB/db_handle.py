@@ -39,10 +39,13 @@ class dbhandle:
         try:
             with self.conn.cursor() as cursor:
                 command = "CREATE TABLE `{}`.`{}` (`Date` VARCHAR(45) NOT NULL,`Open` VARCHAR(45) NULL,`High` VARCHAR(45) NULL,`Low` VARCHAR(45) NULL,`Close` VARCHAR(45) NULL,`Volume` VARCHAR(45) NULL,PRIMARY KEY (`Date`));".format(db_setting["db"],table_name)
-                print(command)
+                #logger.info(command)
                 cursor.execute(command)
         except Exception as err:
-            print(err)
+            if "already exists" in str(err):
+                pass
+            else:
+                logger.error(err)
 
     def insert_db_data(self , stock_num , stock_date , stock_data):
         #logger.info("insert_db_data for {} on {}".format(stock_num,stock_date))
@@ -64,18 +67,22 @@ class dbhandle:
                 self.insert_db_data_state = True
                 self.insert_db_data_state_count_pass += 1
         except Exception as err:
-            logger.error("Insert stock data of {} failed on {}!!!".format(stock_num,stock_date))
-            logger.error(err)
-            self.insert_db_data_state = False
-            self.insert_db_data_state_count_fail += 1
+            if "Duplicate entry" in str(err):
+                self.insert_db_data_state = True
+                self.insert_db_data_state_count_duplicated += 1
+            else:
+                logger.error("Insert stock data of {} failed on {}!!!".format(stock_num,stock_date))
+                logger.error(err)
+                self.insert_db_data_state = False
+                self.insert_db_data_state_count_fail += 1
 
     def get_insert_db_data_state_count(self):
-        return self.insert_db_data_state_count_pass , self.insert_db_data_state_count_fail
+        return self.insert_db_data_state_count_pass , self.insert_db_data_state_count_fail , self.insert_db_data_state_count_duplicated
 
     def reset_insert_db_data_state_count(self):
         self.insert_db_data_state_count_pass = 0
         self.insert_db_data_state_count_fail = 0
-
+        self.insert_db_data_state_count_duplicated = 0
 
 def mylogging():
     global logger
@@ -102,20 +109,36 @@ def mylogging():
 def read_stock_data(file_dir):
     try:
         ret = {}
-        with open(file_dir, newline='',encoding='utf8') as csvfile:
-            rows = csv.reader(csvfile)
-            print(rows)
-            rows = list(rows)
-            #print(rows)
-            for i in range(1,len(rows)):
-                ret[rows[i][0]] = {
-                                    "Open":rows[i][1],
-                                    "High":rows[i][2],
-                                    "Low":rows[i][3],
-                                    "Close":rows[i][4],
-                                    "Volume":rows[i][5]
-                }
-        return ret
+        try:
+            with open(file_dir, newline='',encoding='utf8') as csvfile:
+                rows = csv.reader(csvfile)
+                #print(rows)
+                rows = list(rows)
+                #print(rows)
+                for i in range(1,len(rows)):
+                    ret[rows[i][0]] = {
+                                        "Open":rows[i][1],
+                                        "High":rows[i][2],
+                                        "Low":rows[i][3],
+                                        "Close":rows[i][4],
+                                        "Volume":rows[i][5]
+                    }
+            return ret
+        except:
+            with open(file_dir, newline='') as csvfile:
+                rows = csv.reader(csvfile)
+                #print(rows)
+                rows = list(rows)
+                #print(rows)
+                for i in range(1,len(rows)):
+                    ret[rows[i][0]] = {
+                                        "Open":rows[i][1],
+                                        "High":rows[i][2],
+                                        "Low":rows[i][3],
+                                        "Close":rows[i][4],
+                                        "Volume":rows[i][5]
+                    }
+            return ret
     except Exception as err:
         logger.error(err)
         return None
@@ -183,7 +206,13 @@ if __name__ == '__main__':
     my_db.reset_insert_db_data_state_count()
     for i in progressbar(range(len(stock_data)), "{} : ".format(stock_id), 40):
         my_db.insert_db_data(stock_id,stock_data_list[i][0],stock_data_list[i][1])
-    logger.info("Update {} stock data , total {} , pass {} , fail {}".format(stock_id,len(stock_data),my_db.get_insert_db_data_state_count()[0],my_db.get_insert_db_data_state_count()[1]))
+        
+    pass_count = my_db.get_insert_db_data_state_count()[0]
+    fail_count = my_db.get_insert_db_data_state_count()[1]
+    if str(pass_count) == "0" and str(fail_count) == "0":
+        logger.info("{} stock data is update to date !!!".format(stock_id))
+    else:
+        logger.info("Update {} stock data , total {} , pass {} , fail {}".format(stock_id,len(stock_data),pass_count,fail_count))
 
     time_2 = time.time()
     time_interval = time_2 - time_1

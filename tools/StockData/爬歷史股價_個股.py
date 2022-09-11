@@ -6,10 +6,8 @@ import time
 #from WebCrawler_APIs import *
 
 excel_date_list = [
-'111/09/06' ,
-'111/09/07' ,
-'111/09/08' ,
-'111/09/09'
+
+'111/09/08'
 ]
 
 #current_date = "2019/09/03"
@@ -143,6 +141,43 @@ def Output_Stock_Data_a(output_file , result):
         
         #for i in buy_result:
         wr.writerows(result)
+
+def read_stock_data(file_dir):
+    try:
+        ret = {}
+        try:
+            with open(file_dir, newline='') as csvfile:
+                rows = csv.reader(csvfile)
+                #print(rows)
+                rows = list(rows)
+                #print(rows)
+                for i in range(1,len(rows)):
+                    ret[rows[i][0]] = {
+                                        "Open":rows[i][1],
+                                        "High":rows[i][2],
+                                        "Low":rows[i][3],
+                                        "Close":rows[i][4],
+                                        "Volume":rows[i][5]
+                    }
+            return ret
+        except:
+            with open(file_dir, newline='',encoding="utf8") as csvfile:
+                rows = csv.reader(csvfile)
+                #print(rows)
+                rows = list(rows)
+                #print(rows)
+                for i in range(1,len(rows)):
+                    ret[rows[i][0]] = {
+                                        "Open":rows[i][1],
+                                        "High":rows[i][2],
+                                        "Low":rows[i][3],
+                                        "Close":rows[i][4],
+                                        "Volume":rows[i][5]
+                    }
+            return ret
+    except Exception as err:
+        print(err)
+        return None
         
 for item in range(len(stocklist)):  
 
@@ -150,6 +185,7 @@ for item in range(len(stocklist)):
         stocknumber = stocklist[item]
         print("#### {} ".format(stocknumber))
         output_file_dir = "everyday/All/"+stocknumber + ".csv"
+        stock_data = read_stock_data(output_file_dir)
         
         for current_date in date_list:
             result = []
@@ -170,7 +206,8 @@ for item in range(len(stocklist)):
                     #print("{} : {}".format(key,value))
                     result.append([key,value["open"],value["high"],value["low"],value["close"],value["volume"]])
         
-        Output_Stock_Data_a(output_file_dir , result)
+        if key not in stock_data:
+            Output_Stock_Data_a(output_file_dir , result)
         
     except Exception as err:
         print(err)
