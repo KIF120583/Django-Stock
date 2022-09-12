@@ -188,7 +188,7 @@ if __name__ == '__main__':
     #----------------------------------
 
 
-    #stocklist = ["1101"]
+    #stocklist = ["2031","2059"]
     stocklist = Get_Stock_Number_List("../StockData/stocknumber - full.txt")
 
     fail_list_no_stock_data = []
@@ -252,7 +252,7 @@ if __name__ == '__main__':
     #----------------------------------
     logger.info("="*100)
     time_end = time.time()
-    time_total_interval = time_2 - time_1
+    time_total_interval = time_end - time_start
     logger.info("Total Time cost : {} sec".format(time_total_interval))
 
     fail_count = len(fail_list_no_stock_data)
