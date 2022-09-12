@@ -141,7 +141,11 @@ def read_stock_data(file_dir):
             return ret
     except Exception as err:
         logger.error(err)
-        return None
+
+        if "No such file or directory" in str(err):
+            return "no_stock_data"
+        else:
+            return None
 
 def delays(seconds, reason = ""):
     print("----- delays() -----")
@@ -166,6 +170,14 @@ def progressbar(it, prefix="", size=60, out=sys.stdout): # Python3.3+
         show(i+1)
     print("\n", flush=True, file=out)
 
+def Get_Stock_Number_List(file_name):
+    lines = []
+    with open(file_name, 'r') as f:
+        for line in f.readlines():
+            number = str(line)[:-1]
+            lines.append(number)
+    return lines
+
 if __name__ == '__main__':
 
     # Enable log function
@@ -175,52 +187,75 @@ if __name__ == '__main__':
     time_start = time.time()
     #----------------------------------
 
-    stock_id = "2317"
 
-    time_1 = time.time()
-    my_db.create_table(table_name=stock_id)
-    stock_data = read_stock_data(r"..\StockData\everyday\All\{}.csv".format(stock_id))
+    #stocklist = ["1101"]
+    stocklist = Get_Stock_Number_List("../StockData/stocknumber - full.txt")
 
-    """
-    {
-        '110/07/01': {'Open': '112.50', 'High': '112.50', 'Low': '111.50', 'Close': '112.00', 'Volume': '15,992'},
-        '110/07/02': {'Open': '112.00', 'High': '112.50', 'Low': '111.50', 'Close': '111.50', 'Volume': '16,613'}
-    }
-    """
+    fail_list_no_stock_data = []
 
-    # Convert stock_data to list type
-    stock_data_list = []
-    for key,value in stock_data.items():
-        temp = []
-        temp.append(key)
-        temp.append(value)
-        stock_data_list.append(temp)
-    """
-    [
-      ['110/07/01', {'Open': '112.50', 'High': '112.50', 'Low': '111.50', 'Close': '112.00', 'Volume': '15,992'}],
-      ['110/07/02', {'Open': '112.00', 'High': '112.50', 'Low': '111.50', 'Close': '111.50', 'Volume': '16,613'}]
-    ]
-    """
+    for item in range(len(stocklist)):
 
-    # add progress bar
-    my_db.reset_insert_db_data_state_count()
-    for i in progressbar(range(len(stock_data)), "{} : ".format(stock_id), 40):
-        my_db.insert_db_data(stock_id,stock_data_list[i][0],stock_data_list[i][1])
-        
-    pass_count = my_db.get_insert_db_data_state_count()[0]
-    fail_count = my_db.get_insert_db_data_state_count()[1]
-    if str(pass_count) == "0" and str(fail_count) == "0":
-        logger.info("{} stock data is update to date !!!".format(stock_id))
-    else:
-        logger.info("Update {} stock data , total {} , pass {} , fail {}".format(stock_id,len(stock_data),pass_count,fail_count))
 
-    time_2 = time.time()
-    time_interval = time_2 - time_1
-    logger.info("Time cost for {} is {} sec".format(stock_id,time_interval))
+        stock_id = stocklist[item]
+
+
+        time_1 = time.time()
+
+
+        stock_data = read_stock_data(r"..\StockData\everyday\All\{}.csv".format(stock_id))
+
+        if stock_data == "no_stock_data":
+            logger.error("No such file or directory for {}".format(stock_id))
+            fail_list_no_stock_data.append(stock_id)
+            continue
+
+        my_db.create_table(table_name=stock_id)
+
+
+        """
+        {
+            '110/07/01': {'Open': '112.50', 'High': '112.50', 'Low': '111.50', 'Close': '112.00', 'Volume': '15,992'},
+            '110/07/02': {'Open': '112.00', 'High': '112.50', 'Low': '111.50', 'Close': '111.50', 'Volume': '16,613'}
+        }
+        """
+
+        # Convert stock_data to list type
+        stock_data_list = []
+        for key,value in stock_data.items():
+            temp = []
+            temp.append(key)
+            temp.append(value)
+            stock_data_list.append(temp)
+        """
+        [
+          ['110/07/01', {'Open': '112.50', 'High': '112.50', 'Low': '111.50', 'Close': '112.00', 'Volume': '15,992'}],
+          ['110/07/02', {'Open': '112.00', 'High': '112.50', 'Low': '111.50', 'Close': '111.50', 'Volume': '16,613'}]
+        ]
+        """
+
+        # add progress bar
+        my_db.reset_insert_db_data_state_count()
+        for i in progressbar(range(len(stock_data)), "{} : ".format(stock_id), 40):
+            my_db.insert_db_data(stock_id,stock_data_list[i][0],stock_data_list[i][1])
+
+        pass_count = my_db.get_insert_db_data_state_count()[0]
+        fail_count = my_db.get_insert_db_data_state_count()[1]
+        if str(pass_count) == "0" and str(fail_count) == "0":
+            logger.info("{} stock data is update to date !!!".format(stock_id))
+        else:
+            logger.info("Update {} stock data , total {} , pass {} , fail {}".format(stock_id,len(stock_data),pass_count,fail_count))
+
+        time_2 = time.time()
+        time_interval = time_2 - time_1
+        logger.info("Time cost for {} is {} sec".format(stock_id,time_interval))
 
     #----------------------------------
+    logger.info("="*100)
     time_end = time.time()
     time_total_interval = time_2 - time_1
     logger.info("Total Time cost : {} sec".format(time_total_interval))
 
+    fail_count = len(fail_list_no_stock_data)
+    logger.info("Fail count : {}".format(fail_count))
+    logger.info("No stock data : {}".format(fail_list_no_stock_data))
 
